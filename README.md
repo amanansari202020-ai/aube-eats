@@ -1,44 +1,118 @@
 # Aube Eats
 
-A warm editorial ordering storefront with a React/TypeScript client, Spring Boot API, and Socket.IO order-status relay.
+> Good things take their time.
 
-## Quick Preview
+[![CI](https://github.com/amanansari202020-ai/aube-eats/actions/workflows/ci.yml/badge.svg)](https://github.com/amanansari202020-ai/aube-eats/actions/workflows/ci.yml)
 
-```powershell
-npm install
+Aube Eats is a full-stack cafe ordering experience built around a warm, editorial storefront and a practical order-management backend. Browse a bagel-and-coffee menu, build a cart, and follow the order flow through a React and TypeScript UI, Spring Boot API, and real-time status service.
+
+## What It Includes
+
+- Responsive storefront with menu search, category filters, vegetarian filter, and price filter
+- Cart, coupon preview, and checkout flows
+- Account registration and login, saved profile addresses, and order history
+- Menu, order, customer, and coupon administration with a dashboard
+- Reviews for menu items purchased and delivered
+- Real-time order status updates over Socket.IO
+- REST API documentation through Swagger UI
+- Docker Compose stack with MySQL, Redis, API, and realtime services
+
+## Technology
+
+| Area | Stack |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, React Three Fiber, GSAP |
+| API | Java 17, Spring Boot, Spring Security, Spring Data JPA |
+| Realtime | Node.js, Express, Socket.IO |
+| Data | MySQL, Redis, Flyway |
+| Quality | GitHub Actions, Maven, JUnit, Testcontainers, oxlint |
+
+## Run the Storefront Preview
+
+The preview runs without the backend. The menu and cart use bundled data, and guest checkout creates a preview order rather than saving an order to the database.
+
+Requirements: Node.js 24 recommended.
+
+```bash
+npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173`. The menu and cart work from bundled preview data; guest checkout creates a clearly labeled preview order. Register/login and saved orders use the Spring API when it is running.
+Open [http://localhost:5173](http://localhost:5173).
 
-## Full Stack
+## Run the Full Stack
 
-Docker and Docker Compose are required. Copy `.env.example` to `.env`, replace the database passwords and webhook secret, and set a fresh base64-encoded JWT key (at least 32 random bytes). Then run:
+Requirements: Docker Desktop with Docker Compose.
 
-```powershell
-Copy-Item .env.example .env
-docker compose up --build
-```
+1. Create a local environment file:
 
-Open `http://localhost:8081`. The API is also available at `http://localhost:8080`; Swagger UI is at `/swagger-ui.html`. Flyway creates the schema and seeds the menu at first startup.
+	```powershell
+	Copy-Item .env.example .env
+	```
 
-For local Spring development, run MySQL and Redis separately, then set the variables in `.env` and use `mvn spring-boot:run` from `backend`. Run the realtime service with `npm ci` and `npm run dev` from `node-service`.
+2. Edit `.env`. Replace the sample database passwords and webhook secret. Set `JWT_SECRET_BASE64` to a fresh Base64-encoded secret containing at least 32 random bytes. Use different values for each secret, and do not commit `.env`.
 
-## Checks
+	To generate a JWT secret in Windows PowerShell:
 
-```powershell
+	```powershell
+	$bytes = New-Object byte[] 32
+	$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+	$rng.GetBytes($bytes)
+	[Convert]::ToBase64String($bytes)
+	$rng.Dispose()
+	```
+
+	Copy the output into `JWT_SECRET_BASE64` in `.env`. Generate a separate random value for `ORDER_WEBHOOK_SECRET`. `ADMIN_EMAIL` and `ADMIN_PASSWORD` are optional; when configured, the bootstrap password must be 12 to 72 characters.
+
+3. Build and start the services:
+
+	```bash
+	docker compose up --build
+	```
+
+Open the app at [http://localhost:8081](http://localhost:8081). The API is at [http://localhost:8080](http://localhost:8080), with Swagger UI at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html). Flyway creates the schema and seeds the initial menu on first startup.
+
+Stop the stack with `Ctrl+C`, or run `docker compose down` from another terminal. Named database volumes are retained when you use `docker compose down`.
+
+## Development Checks
+
+Run these from the repository root:
+
+```bash
+npm ci
 npm run lint
 npm run build
-Push-Location node-service; npm ci; npm run check; Pop-Location
 ```
 
-Backend tests run in CI with Java 17 and Maven. The MySQL migration test uses Testcontainers and is skipped when Docker is unavailable.
+Check the realtime service:
 
-## Services
+```bash
+cd node-service
+npm ci
+npm run check
+```
 
-- `src/`: responsive storefront, R3F bagel scene, cart, account dialog, API client, and order confirmation.
-- `backend/`: layered Spring Boot API, JWT/refresh auth, JPA entities, Flyway migrations, menu/order/admin endpoints, and OpenAPI.
-- `node-service/`: Express health/webhook endpoints and JWT-authenticated Socket.IO order rooms.
-- `docker-compose.yml`: frontend, API, realtime service, MySQL, and Redis.
+Run backend tests with Java 17 and Maven:
 
-Razorpay credentials are configuration placeholders. Signed-in checkout currently supports cash on delivery only; online payment is rejected until Razorpay order creation and signature verification are implemented for your merchant account. Guest checkout is a preview and does not create a saved kitchen order.
+```bash
+cd backend
+mvn -B verify
+```
+
+The Flyway migration test uses Testcontainers and requires Docker. It is skipped when Docker is unavailable. GitHub Actions runs the frontend, realtime, and backend checks on pushes and pull requests.
+
+## Project Layout
+
+```text
+src/           React storefront and shared client code
+backend/       Spring Boot API, persistence, migrations, and tests
+node-service/  Express health/webhook service and Socket.IO server
+public/        Brand assets
+docker-compose.yml
+```
+
+## Current Limitations
+
+- Guest checkout is a preview and does not create a persisted order.
+- Signed-in checkout currently supports cash on delivery. Online payment is rejected until Razorpay order creation and signature verification are implemented.
+- Razorpay environment variables are placeholders; no merchant credentials are included.
