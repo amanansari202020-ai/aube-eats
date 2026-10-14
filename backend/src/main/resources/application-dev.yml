@@ -1,0 +1,13 @@
+logging:
+  level:
+    com.aube.eats: INFO
+    org.springframework.security: WARN
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

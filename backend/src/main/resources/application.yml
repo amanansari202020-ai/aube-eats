@@ -1,0 +1,59 @@
+spring:
+  config:
+    import: optional:file:../.env[.properties]
+  profiles:
+    default: dev
+  datasource:
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/aube_eats?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DATABASE_USER:aube}
+    password: ${DATABASE_PASSWORD:aube_dev}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
+server:
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-stacktrace: never
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+app:
+  cors:
+    allowed-origin: ${CLIENT_ORIGIN:http://localhost:5173}
+  jwt:
+    secret-base64: ${JWT_SECRET_BASE64:YWJlLWRldi1vbmx5LXNlY3JldC1rZXktc2hvdWxkLW5vdC1iZS1pbi1wcm9k}
+    access-token-seconds: ${ACCESS_TOKEN_SECONDS:900}
+  realtime:
+    webhook-url: ${REALTIME_WEBHOOK_URL:http://localhost:4000/webhooks/orders}
+    webhook-secret: ${ORDER_WEBHOOK_SECRET:}
+    bootstrap:
+      admin-email: ${ADMIN_EMAIL:}
+      admin-password: ${ADMIN_PASSWORD:}
+  payments:
+    razorpay-key-id: ${RAZORPAY_KEY_ID:}
+    razorpay-key-secret: ${RAZORPAY_KEY_SECRET:}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}

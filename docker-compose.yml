@@ -1,0 +1,101 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_URL: /api/v1
+    ports:
+      - "8081:80"
+    depends_on:
+      api:
+        condition: service_healthy
+      realtime:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      DATABASE_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-aube_eats}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DATABASE_USER: ${MYSQL_USER:-aube}
+      DATABASE_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      REDIS_HOST: redis
+      JWT_SECRET_BASE64: ${JWT_SECRET_BASE64:?Set JWT_SECRET_BASE64 in .env}
+      CLIENT_ORIGIN: http://localhost:8081
+      ORDER_WEBHOOK_SECRET: ${ORDER_WEBHOOK_SECRET:?Set ORDER_WEBHOOK_SECRET in .env}
+      REALTIME_WEBHOOK_URL: http://realtime:4000/webhooks/orders
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/actuator/health"]
+      interval: 20s
+      timeout: 4s
+      retries: 8
+      start_period: 45s
+    restart: unless-stopped
+
+  realtime:
+    build: ./node-service
+    environment:
+      PORT: 4000
+      CLIENT_ORIGIN: http://localhost:8081
+      API_BASE_URL: http://api:8080
+      JWT_SECRET_BASE64: ${JWT_SECRET_BASE64:?Set JWT_SECRET_BASE64 in .env}
+      ORDER_WEBHOOK_SECRET: ${ORDER_WEBHOOK_SECRET:?Set ORDER_WEBHOOK_SECRET in .env}
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 4s
+      retries: 5
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-aube_eats}
+      MYSQL_USER: ${MYSQL_USER:-aube}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:
